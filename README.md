@@ -1,3 +1,3 @@
 # ShinyApps
 
-Example apps for learning the language
+An assortment of beginner shiny apps
