@@ -3,6 +3,8 @@
 library(shiny)
 library(tidyverse)
 
+# data comes from this site https://data.world/timothyrenner/ufo-sightings
+
 ufo_data <- read.csv("nuforc_reports.csv") %>%
   filter(state != "") %>%
   mutate(date_time = as.Date(date_time)) %>%
