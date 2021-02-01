@@ -1,30 +1,56 @@
 library(shiny)
 library(gapminder)
-library(ggplot2)
+library(tidyverse)
+
+
+my_css <- "
+#download_data {
+  /* Change the background color of the download button
+     to orange. */
+  background: orange;
+
+  /* Change the text size to 20 pixels. */
+  font-size: 20px;
+}
+
+#table {
+  /* Change the text color of the table to red. */
+  color: red;
+}
+"
 
 ui <- fluidPage(
   h1("Gapminder"),
-  sliderInput(inputId = "life", label = "Life expectancy",
-              min = 0, max = 120,
-              value = c(30, 50)),
-  selectInput("continent", "Continent",
-              choices = c("All", levels(gapminder$continent))),
-  # Add a download button
-  downloadButton(outputId = "download_data", label = "Download"),
-  plotOutput("plot"),
-  tableOutput("table")
+  # Add the CSS that we wrote to the Shiny app
+  tags$style(my_css),
+  tabsetPanel(
+    tabPanel(
+      title = "Inputs",
+      sliderInput(inputId = "life", label = "Life expectancy",
+                  min = 0, max = 120,
+                  value = c(30, 50)),
+      selectInput("continent", "Continent",
+                  choices = c("All", levels(gapminder$continent))),
+      downloadButton("download_data")
+    ),
+    tabPanel(
+      title = "Plot",
+      plotOutput("plot")
+    ),
+    tabPanel(
+      title = "Table",
+      DT::dataTableOutput("table")
+    )
+  )
 )
 
-server <- function(input, output, session) {
-  my_data <- reactive({
+server <- function(input, output) {
+  filtered_data <- reactive({
     data <- gapminder
     data <- subset(
       data,
       lifeExp >= input$life[1] & lifeExp <= input$life[2]
     )
-  })
-  output$table <- renderTable({
-    my_data()
     if (input$continent != "All") {
       data <- subset(
         data,
@@ -34,40 +60,21 @@ server <- function(input, output, session) {
     data
   })
   
-  # Create a download handler
+  output$table <- DT::renderDataTable({
+    data <- filtered_data()
+    data
+  })
+  
   output$download_data <- downloadHandler(
-    # The downloaded file is named "gapminder_data.csv"
     filename = "gapminder_data.csv",
     content = function(file) {
-      data <- gapminder
-      data <- subset(
-        data,
-        lifeExp >= input$life[1] & lifeExp <= input$life[2]
-      )
-      if (input$continent != "All") {
-        data <- subset(
-          data,
-          continent == input$continent
-        )
-      }
-      
-      # Write the filtered data into a CSV file
+      data <- filtered_data()
       write.csv(data, file, row.names = FALSE)
     }
   )
   
   output$plot <- renderPlot({
-    data <- gapminder
-    data <- subset(
-      data,
-      lifeExp >= input$life[1] & lifeExp <= input$life[2]
-    )
-    if (input$continent != "All") {
-      data <- subset(
-        data,
-        continent == input$continent
-      )
-    }
+    data <- filtered_data()
     ggplot(data, aes(gdpPercap, lifeExp)) +
       geom_point() +
       scale_x_log10()
